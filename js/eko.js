@@ -32,6 +32,7 @@ var eko = (function() {
       delete() {
         const model = internal(this).model;
         internal(model).entities.remove(this);
+        return this;
       }
 
       // Checks if this entity currently exists in the model.
@@ -153,6 +154,37 @@ var eko = (function() {
 
       type() {
         return internal(this).type;
+      }
+
+    }
+
+    class Component extends Structure {
+
+      constructor(type, entity) {
+        super(type);
+        internal(this).entity = entity;
+      }
+
+      // Add this component to the model.
+      create() {
+        // TODO
+        return this;
+      }
+
+      // Remove this component from the model.
+      delete() {
+        // TODO
+        return this;
+      }
+
+      // Return the entity this component is attached to.
+      entity() {
+        return internal(this).entity;
+      }
+
+      // Checks if this component exists.
+      exists() {
+        // TODO
       }
 
     }
