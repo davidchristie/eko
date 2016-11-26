@@ -51,6 +51,61 @@ var eko = (function() {
 
     }
 
+    // A database of entity objects.
+    class Entities {
+
+      constructor() {
+        internal(this).entityToID = new Map();
+        internal(this).idToEntity = new Map();
+        internal(this).nextID = 0;
+      }
+
+      // Add entity to the database.
+      add(entity) {
+        if (!this.contains(entity)) {
+          const id = internal(this).nextID++;
+          internal(this).entityToID.set(entity, id);
+          internal(this).idToEntity.set(id, entity);
+        }
+      }
+
+      // Checks if this database contains the specified entity.
+      contains(entity) {
+        const id = this.id(entity);
+        return this.has(id) && this.get(id) === entity;
+      }
+
+      // Return the specified entity.
+      get(id) {
+        return internal(this).idToEntity.get(id);
+      }
+
+      // Checks if database has an entity assigned to the specified ID value.
+      has(id) {
+        return internal(this).idToEntity.has(id);
+      }
+
+      // Return the ID value assigned to the specified entity.
+      id(entity) {
+        return internal(this).entityToID.get(entity);
+      }
+
+      // Return an array of all the entities stored in this database.
+      list() {
+        return Array.from(internal(this).idToEntity.values());
+      }
+
+      // Remove entity from the database.
+      remove(entity) {
+        if (this.contains(entity)) {
+          const id = this.id(entity);
+          internal(this).entityToID.delete(entity);
+          internal(this).idToEntity.delete(id);
+        }
+      }
+
+    }
+
     class Model {
 
       constructor() {
@@ -72,8 +127,6 @@ var eko = (function() {
 
     return Model;
   });
-
-  console.log(new Model());
 
   // Public API.
   return {};
