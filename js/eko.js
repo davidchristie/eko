@@ -587,7 +587,26 @@ var eko = (function() {
 
       render() {
         console.log("render");
-        // TODO
+
+        const perspective = model.entities({perspective: {}})[0];
+        const focus = perspective.connections("incoming", "contains")[0].source();
+
+        const $eko = $("#eko");
+
+        const $perspective = $("<div>");
+
+        // Add focus title.
+        const {structure: {title}} = focus.properties();
+
+        $perspective.append($("<h1>").html(title));
+
+        // Describe focus contents.
+        for (const contains of focus.connections("outgoing", "contains")) {
+          const {structure: {name}} = contains.target().properties();
+          $perspective.append($("<p>").html(name));
+        }
+
+        $eko.empty().append($perspective);
       }
 
       start() {
@@ -659,7 +678,7 @@ eko.add("initial", "create_world", {
     const perspective = model.entity().create().properties({
       character: {},
       perspective: {},
-      structure: {}
+      structure: {name: "perspective", title: "Perspective"}
     });
 
     calabash.connection("contains", wine).create();
