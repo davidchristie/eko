@@ -68,9 +68,42 @@ var eko = (function() {
         return internal(model).entities.id(this);
       }
 
+      // Check if this entity has the specified property values.
+      matches(properties) {
+        for (const type in properties) {
+          const component = this.component(type);
+          if (!component.exists())
+            return false;
+          for (const key in properties[type]) {
+            const value = properties[type][key];
+            if (component.property(key) !== value)
+              return false;
+          }
+        }
+        return true;
+      }
+
       // Return the model this entity is associated with.
       model() {
         return internal(this).model;
+      }
+
+      // Get or set multiple property values.
+      properties(properties) {
+        if (arguments.length === 0) {
+          // Return existing component properties.
+          const properties = {};
+          for (const component of this.components())
+            properties[component.type()] = component.properties();
+          return properties;
+        } else {
+          // Set component properties.
+          for (const type in properties) {
+            const component = this.component(type).create();
+            component.properties(properties[type]);
+          }
+          return this;
+        }
       }
 
     }
@@ -142,7 +175,7 @@ var eko = (function() {
         if (arguments.length === 0) {
           // Return the existing properties.
           const properties = {};
-          for (const key in internal(this).properties.keys())
+          for (const key of internal(this).properties.keys())
             properties[key] = this.property(key);
           return properties;
         } else {
@@ -307,8 +340,10 @@ var eko = (function() {
       // Return an array of entities matching the specified properties. If no
       // properties are given, return all entities in the model.
       entities(properties) {
-        // TODO Filter entities by properties.
-        return internal(this).entities.list();
+        var entities = internal(this).entities.list();
+        if (arguments.length > 0)
+          entities = entities.filter(e => e.matches(properties));
+        return entities;
       }
 
       // If an ID value is given return the corresponding entity. Otherwise
