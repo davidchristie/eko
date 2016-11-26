@@ -595,107 +595,101 @@ var eko = (function() {
     return new Model();
   })();
 
-  const engine = (function() {
+  // Engine module.
+  (function() {
 
-    class Engine {
+    // Start engine when document is ready.
+    $(document).ready(function ready() {
+      start();
+    });
 
-      constructor() {}
-
-      $link(option) {
-        const $link = $("<a>").html(option.text);
-        $link.on("click", function() {
-          console.log("option selected: " + option.text);
-          option.select();
-          this.update();
-        }.bind(this));
-        return $link;
-      }
-
-      render() {
-        console.log("render");
-
-        const perspective = model.entities({perspective: {}})[0];
-        const focus = perspective.call("get_focus");
-
-        const $eko = $("#eko");
-
-        const $header = $("<div>", {class: "header-menu"});
-        const $menu = $("<ul>");
-        for (const option of perspective.call("get_options")) {
-          $menu.append($("<li>").append(this.$link(option)));
-        }
-        $header.append($menu);
-
-
-        const $perspective = $("<div>");
-        $perspective.append($header);
-
-        // Add title.
-        const title = perspective === focus ?
-          "Inventory" :
-          focus.component("structure").property("title");
-
-        $perspective.append($("<h1>").html(title));
-
-        // Describe focus contents.
-        for (const contains of focus.connections("outgoing", "contains")) {
-          const subject = contains.target();
-          const description = perspective.call("describe", subject);
-          $perspective.append($("<p>").html(description));
-        }
-
-        $eko.empty().append($perspective);
-      }
-
-      start() {
-        console.log("start");
-        model.reset();
-        for (const initial of assets.list("initial"))
-          initial(model);
-        engine.render();
-      }
-
-      // This method is called after the user selects an option.
-      update() {
-        const isComplete = function(action) {
-          const {action: {name, progress}} = action.properties();
-          const duration = eko.get("action", name).duration;
-          return progress >= duration;
-        };
-        const complete = function(action) {
-          const name = action.component("action").property("name");
-          const agent = action.connections("incoming", "performing")[0].
-            source();
-          const target = action.call("get_target");
-          const using = action.call("get_using");
-          action.delete();
-          eko.get("action", name).complete(agent, target, using);
-        };
-
-        console.log("update");
-        const perspective = model.entities({perspective: {}})[0];
-        const action = perspective.connections("outgoing", "performing")[0]
-          .target();
-
-        if (isComplete(action))
-          complete(action);
-        else {
-          // TODO Perform time steps until the perspective character is no
-          // longer performing an action.
-        }
-
-        this.render();
-      }
-
+    function $link(option) {
+      const $link = $("<a>").html(option.text);
+      $link.on("click", function() {
+        console.log("option selected: " + option.text);
+        option.select();
+        update();
+      }.bind(this));
+      return $link;
     }
 
-    return new Engine();
-  })();
+    function render() {
+      console.log("render");
 
-  // Start engine when document is ready.
-  $(document).ready(function ready() {
-    engine.start();
-  });
+      const perspective = model.entities({perspective: {}})[0];
+      const focus = perspective.call("get_focus");
+
+      const $eko = $("#eko");
+
+      const $header = $("<div>", {class: "header-menu"});
+      const $menu = $("<ul>");
+      for (const option of perspective.call("get_options")) {
+        $menu.append($("<li>").append($link(option)));
+      }
+      $header.append($menu);
+
+
+      const $perspective = $("<div>");
+      $perspective.append($header);
+
+      // Add title.
+      const title = perspective === focus ?
+        "Inventory" :
+        focus.component("structure").property("title");
+
+      $perspective.append($("<h1>").html(title));
+
+      // Describe focus contents.
+      for (const contains of focus.connections("outgoing", "contains")) {
+        const subject = contains.target();
+        const description = perspective.call("describe", subject);
+        $perspective.append($("<p>").html(description));
+      }
+
+      $eko.empty().append($perspective);
+    }
+
+    function start() {
+      console.log("start");
+      model.reset();
+      for (const initial of assets.list("initial"))
+        initial(model);
+      render();
+    }
+
+    // This method is called after the user selects an option.
+    function update() {
+      const isComplete = function(action) {
+        const {action: {name, progress}} = action.properties();
+        const duration = eko.get("action", name).duration;
+        return progress >= duration;
+      };
+      const complete = function(action) {
+        const name = action.component("action").property("name");
+        const agent = action.connections("incoming", "performing")[0].
+          source();
+        const target = action.call("get_target");
+        const using = action.call("get_using");
+        action.delete();
+        eko.get("action", name).complete(agent, target, using);
+      };
+
+      console.log("update");
+      const perspective = model.entities({perspective: {}})[0];
+      const action = perspective.connections("outgoing", "performing")[0]
+        .target();
+
+      if (isComplete(action))
+        complete(action);
+      else {
+        // TODO Perform time steps until the perspective character is no
+        // longer performing an action.
+      }
+
+      render();
+    }
+
+  })();
 
   // Public API.
   return {
