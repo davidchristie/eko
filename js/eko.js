@@ -189,6 +189,68 @@ var eko = (function() {
 
     }
 
+    // A database of component objects.
+    class Components {
+
+      constructor() {
+        internal(this).entityToComponents = new Map();
+        internal(this).typeToComponents = new Map();
+      }
+
+      // Add component to database.
+      add(component) {
+        if (!this.contains(component)) {
+          const {entityToComponents, typeToComponents} = internal(this);
+          const type = component.type();
+          const entity = component.entity();
+          if (!typeToComponents.has(type))
+            typeToComponents.set(type, new Set());
+          typeToComponents.get(type).add(component);
+          if (!entityToComponents.has(entity))
+            entityToComponents.set(entity, new Map());
+          entityToComponents.get(entity).set(type, component);
+        }
+      }
+
+      // Check if database contains component.
+      contains(component) {
+        const type = component.type();
+        const entity = component.entity();
+        return this.has(type, entity) && this.get(type, entity) === component;
+      }
+
+      // Get the specified component.
+      get(type, entity) {
+        if (this.has(type, entity)) {
+          const entityToComponents = internal(this).entityToComponents;
+          return entityToComponents.get(entity).get(type);
+        }
+      }
+
+      // Check if entity has a component of type.
+      has(type, entity) {
+        const entityToComponents = internal(this).entityToComponents;
+        return entityToComponents.has(entity) &&
+          entityToComponents.get(entity).has(type);
+      }
+
+      // Remove component from database.
+      remove(component) {
+        if (this.contains(component)) {
+          const {entityToComponents, typeToComponents} = internal(this);
+          const type = component.type();
+          const entity = component.entity();
+          typeToComponents.get(type).delete(component);
+          if (typeToComponents.get(type).size === 0)
+            typeToComponents.delete(type);
+          entityToComponents.get(entity).delete(type);
+          if (entityToComponents.get(entity).size === 0)
+            entityToComponents.delete(entity);
+        }
+      }
+
+    }
+
     class Model {
 
       constructor() {
