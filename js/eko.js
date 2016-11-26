@@ -15,6 +15,42 @@ var eko = (function() {
 
   const Model = (function() {
 
+    class Entity {
+
+      constructor(model) {
+        internal(this).model = model;
+      }
+
+      // Add this entity to the model.
+      create() {
+        // TODO
+        return this;
+      }
+
+      // Remove this entity from the model.
+      delete() {
+        // TODO
+        return this;
+      }
+
+      // Checks if this entity currently exists in the model.
+      exists() {
+        // TODO
+      }
+
+      // Return a number that uniquely defines this entity in the model, or
+      // undefined if the entity does not currently exist.
+      id() {
+        // TODO
+      }
+
+      // Return the model this entity is associated with.
+      model() {
+        return internal(this).model;
+      }
+
+    }
+
     class Model {
 
       constructor() {
