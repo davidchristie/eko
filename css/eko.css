@@ -12,6 +12,7 @@ li {
 
 li a {
     display: block;
+    cursor: pointer;
     color: white;
     text-align: center;
     padding: 16px;
@@ -20,4 +21,10 @@ li a {
 
 li a:hover {
     background-color: #111111;
+}
+
+#eko {
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -webkit-user-select: none;
 }
