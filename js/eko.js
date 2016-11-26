@@ -108,6 +108,41 @@ var eko = (function() {
 
     }
 
+    class Connection extends Structure {
+
+      constructor(type, source, target) {
+        super(type);
+        internal(this).source = source;
+        internal(this).target = target;
+      }
+
+      // Add connection to the model.
+      create() {
+        // TODO
+      }
+
+      // Remove connection from the model.
+      delete() {
+        // TODO
+      }
+
+      // Checks if this connection exists.
+      exists() {
+        // TODO
+      }
+
+      // The entity this connection starts at.
+      source() {
+        return internal(this).source;
+      }
+
+      // The entity this connection ends at.
+      target() {
+        return internal(this).target;
+      }
+
+    }
+
     // A database of entity objects.
     class Entities {
 
