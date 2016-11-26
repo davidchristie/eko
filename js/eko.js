@@ -605,7 +605,7 @@ var eko = (function() {
         console.log("render");
 
         const perspective = model.entities({perspective: {}})[0];
-        const focus = perspective.call("get_location");
+        const focus = perspective.call("get_focus");
 
         const $eko = $("#eko");
 
@@ -668,24 +668,51 @@ var eko = (function() {
 // Notes:
 // - Volume is measured in litres.
 
-eko.set("description", "breadfruit_tree", {
-  matches(observer, subject) {
-    return subject.matches({structure: {title: "Breadfruit Tree"}});
+eko.set("action", "inventory", {
+  duration: 0,
+  title: "inventory",
+  complete: function(agent, target, using) {
+    agent.call("set_focus", agent);
   },
+  matches: function(agent, target, using) {
+    return agent.matches({perspective: {}}) &&
+      agent.call("get_focus") !== agent &&
+      target === undefined &&
+      using === undefined;
+  }
+});
+eko.set("action", "surroundings", {
+  duration: 0,
+  title: "surroundings",
+  complete: function(agent, target, using) {
+    agent.call("clear_focus");
+  },
+  matches: function(agent, target, using) {
+    return agent.matches({perspective: {}}) &&
+      agent.connections("outgoing", "focused_on").length !== 0 &&
+      target === undefined &&
+      using === undefined;
+  }
+});
+
+eko.set("description", "breadfruit_tree", {
   describe(observer, subject) {
     const {structure: {name}} = subject.properties();
     return `A breadfruit ${name}.`;
+  },
+  matches(observer, subject) {
+    return subject.matches({structure: {title: "Breadfruit Tree"}});
   }
 });
 eko.set("description", "mudbrick_walls", {
+  describe(observer, subject) {
+    const {structure: {name}} = subject.properties();
+    return `Tall mudbrick ${name} surround the yard.`;
+  },
   matches(observer, subject) {
     return subject.matches({structure: {title: "Mudbrick Walls"}}) &&
       subject.call("get_location").matches({structure: {title: "Courtyard"}});
   },
-  describe(observer, subject) {
-    const {structure: {name}} = subject.properties();
-    return `Tall mudbrick ${name} surround the yard.`;
-  }
 });
 eko.set("description", "wooden_bench", {
   matches(observer, subject) {
@@ -748,6 +775,9 @@ eko.set("initial", "create_world",
     perspective.call("set_location", courtyard);
   });
 
+eko.set("method", "clear_focus", function() {
+  this.connections("outgoing", "focused_on").forEach(c => c.delete());
+});
 eko.set("method", "describe", function(subject) {
   const matching = [];
   for (const description of eko.list("description"))
@@ -758,9 +788,22 @@ eko.set("method", "describe", function(subject) {
   const selected = matching[Math.floor(matching.length * Math.random())];
   return selected.describe(this, subject);
 });
+eko.set("method", "get_focus", function() {
+  const connections = this.connections("outgoing", "focused_on");
+  if (connections.length > 0)
+    return connections[0].target();
+  const location = this.call("get_location");
+  if (location !== undefined)
+    return location;
+  return this;
+});
 eko.set("method", "get_location", function() {
   const connections = this.connections("incoming", "contains");
   return connections.length === 0 ? undefined : connections[0].source();
+});
+eko.set("method", "set_focus", function(focus) {
+  this.call("clear_focus");
+  this.connection("focused_on", focus).create();
 });
 eko.set("method", "set_location", function(location) {
   this.connections("incoming", "connections").forEach(c => c.delete());
