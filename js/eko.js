@@ -108,41 +108,6 @@ var eko = (function() {
 
     }
 
-    class Connection extends Structure {
-
-      constructor(type, source, target) {
-        super(type);
-        internal(this).source = source;
-        internal(this).target = target;
-      }
-
-      // Add connection to the model.
-      create() {
-        // TODO
-      }
-
-      // Remove connection from the model.
-      delete() {
-        // TODO
-      }
-
-      // Checks if this connection exists.
-      exists() {
-        // TODO
-      }
-
-      // The entity this connection starts at.
-      source() {
-        return internal(this).source;
-      }
-
-      // The entity this connection ends at.
-      target() {
-        return internal(this).target;
-      }
-
-    }
-
     // A database of entity objects.
     class Entities {
 
@@ -360,6 +325,133 @@ var eko = (function() {
           entityToComponents.get(entity).delete(type);
           if (entityToComponents.get(entity).size === 0)
             entityToComponents.delete(entity);
+        }
+      }
+
+    }
+
+    class Connection extends Structure {
+
+      constructor(type, source, target) {
+        super(type);
+        internal(this).source = source;
+        internal(this).target = target;
+      }
+
+      // Add connection to the model.
+      create() {
+        // TODO
+      }
+
+      // Remove connection from the model.
+      delete() {
+        // TODO
+      }
+
+      // Checks if this connection exists.
+      exists() {
+        // TODO
+      }
+
+      // The entity this connection starts at.
+      source() {
+        return internal(this).source;
+      }
+
+      // The entity this connection ends at.
+      target() {
+        return internal(this).target;
+      }
+
+    }
+
+    class Connections {
+
+      constructor() {
+        internal(this).entityToConnections = new Map();
+        internal(this).keyToConnection = new Map();
+      }
+
+      add(connection) {
+        if (!this.contains(connection)) {
+          const type = connection.type();
+          const source = connection.source();
+          const target = connection.target();
+          if (this.has(type, source, target))
+            throw new Error(`Duplicate connection: type=${type}, source=${source}, target=${target}`);
+          const {entityToConnections, keyToConnection} = internal(this);
+          const key = Connections.key(type, source, target);
+          if (!entityToConnections.has(source))
+            entityToConnections.set(source, new Set());
+          entityToConnections.get(source).add(connection);
+          if (!entityToConnections.has(target))
+            entityToConnections.set(target, new Set());
+          entityToConnections.get(target).add(connection);
+          keyToConnection.set(key, connection);
+        }
+      }
+
+      contains(connection) {
+        const type = connection.type();
+        const source = connection.source();
+        const target = connection.target();
+        return this.has(type, source, target) &&
+          this.get(type, source, target) === connection;
+      }
+
+      get(type, source, target) {
+        const key = Connections.key(type, source, target);
+        return keyToConnection.get(key);
+      }
+
+      has(type, source, target) {
+        const key = Connections.key(type, source, target);
+        return keyToConnection.has(key);
+      }
+
+      static key(type, source, target) {
+        return `${type}:${source.id()}:${target.id()}`;
+      }
+
+      list(entity, direction, type) {
+        const {entityToConnections} = internal(this);
+        var matching = entityToConnections.has(entity) ?
+          Array.from(entityToConnections.get(entity).values()) :
+          [];
+        if (direction !== undefined) {
+          switch (direction) {
+            case 'both':
+              // Do nothing.
+              break;
+            case 'incoming':
+              matching = matching.filter(c => c.target() === entity);
+              break;
+            case 'outgoing':
+              matching = matching.filter(c => c.source() === entity);
+              break;
+            default:
+              throw new Error(`Invalid direction: ${direction}`);
+          }
+        }
+        if (type !== undefined)
+          matching = matching.filter(c => c.type() === type);
+        return matching;
+      }
+
+      remove(connection) {
+        if (this.contains(connection)) {
+          const type = connection.type();
+          const source = connection.source();
+          const target = connection.target();
+          const key = Connections.key(type, source, target);
+          const {entityToConnections, keyToConnection} = internal(this);
+          entityToConnections.get(source).delete(connection);
+          if (entityToConnections.get(source).size === 0)
+            entityToConnections.delete(source);
+          entityToConnections.get(target).delete(connection);
+          if (entityToConnections.get(target).size === 0)
+            entityToConnections.delete(target);
+          keyToConnection.delete(key);
         }
       }
 
