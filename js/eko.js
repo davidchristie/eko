@@ -13,6 +13,50 @@ var eko = (function() {
     };
   })();
 
+  const assets = (function() {
+
+    class Assets {
+
+      constructor() {
+        internal(this).assetToName = new Map();
+        internal(this).assetToType = new Map();
+        internal(this).typeToAssets = new Map();
+      }
+
+      add(type, name, asset) {
+        const {assetToName, assetToType, typeToAssets} = internal(this);
+        assetToName.set(asset, name);
+        assetToType.set(asset, type);
+        if (!typeToAssets.has(type))
+          typeToAssets.set(type, new Map());
+        typeToAssets.get(type).set(name, asset);
+      }
+
+      get(type, name) {
+        if (this.has(type, name)) {
+          const {typeToAssets} = internal(this);
+          return typeToAssets.get(type).get(name);
+        }
+      }
+
+      has(type, name) {
+        const {typeToAssets} = internal(this);
+        return typeToAssets.has(type) && typeToAssets.get(type).has(name);
+      }
+
+      list(type) {
+        const {typeToAssets} = internal(this);
+        if (typeToAssets.has(type))
+          return Array.from(typeToAssets.get(type).values());
+        else
+          return [];
+      }
+
+    }
+
+    return new Assets();
+  })();
+
   const Model = (function() {
 
     class Entity {
@@ -520,5 +564,9 @@ var eko = (function() {
   })();
 
   // Public API.
-  return {Model};
+  return {
+    add: function(type, name, asset) {
+      assets.add(type, name, asset);
+    }
+  };
 })();
