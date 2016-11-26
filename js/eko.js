@@ -590,22 +590,27 @@ var eko = (function() {
       constructor() {}
 
       render() {
+        console.log("render");
         // TODO
       }
 
       start() {
         console.log("start");
         model.reset();
-        for (const initial of assets.list('initial')) {
-          console.log(assets.name(initial));
+        for (const initial of assets.list('initial'))
           initial.apply(model);
-        }
+        this.render();
       }
 
     }
 
     return new Engine();
   })();
+
+  // Start engine when document is ready.
+  $(document).ready(function ready() {
+    engine.start();
+  });
 
   // Public API.
   return {
@@ -614,3 +619,9 @@ var eko = (function() {
     }
   };
 })();
+
+eko.add('initial', 'create_world', {
+  apply(model) {
+    // TODO
+  }
+});
