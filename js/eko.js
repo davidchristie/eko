@@ -601,6 +601,16 @@ var eko = (function() {
 
       constructor() {}
 
+      $link(option) {
+        const $link = $("<a>").html(option.text);
+        $link.on("click", function() {
+          console.log("option selected: " + option.text);
+          option.select();
+          this.update();
+        }.bind(this));
+        return $link;
+      }
+
       render() {
         console.log("render");
 
@@ -610,20 +620,20 @@ var eko = (function() {
         const $eko = $("#eko");
 
         const $header = $("<div>", {class: "header-menu"});
-        (function() {
-          const $menu = $("<ul>");
-          for (const option of perspective.call("get_options")) {
-            $menu.append($("<li>").append($("<a>").html(option.text)));
-          }
-          $header.append($menu);
-        })();
+        const $menu = $("<ul>");
+        for (const option of perspective.call("get_options")) {
+          $menu.append($("<li>").append(this.$link(option)));
+        }
+        $header.append($menu);
 
 
         const $perspective = $("<div>");
         $perspective.append($header);
 
-        // Add focus title.
-        const {structure: {title}} = focus.properties();
+        // Add title.
+        const title = perspective === focus ?
+          "Inventory" :
+          focus.component("structure").property("title");
 
         $perspective.append($("<h1>").html(title));
 
@@ -642,6 +652,38 @@ var eko = (function() {
         model.reset();
         for (const initial of assets.list("initial"))
           initial(model);
+        engine.render();
+      }
+
+      // This method is called after the user selects an option.
+      update() {
+        const isComplete = function(action) {
+          const {action: {name, progress}} = action.properties();
+          const duration = eko.get("action", name).duration;
+          return progress >= duration;
+        };
+        const complete = function(action) {
+          const name = action.component("action").property("name");
+          const agent = action.connections("incoming", "performing")[0].
+            source();
+          const target = action.call("get_target");
+          const using = action.call("get_using");
+          action.delete();
+          eko.get("action", name).complete(agent, target, using);
+        };
+
+        console.log("update");
+        const perspective = model.entities({perspective: {}})[0];
+        const action = perspective.connections("outgoing", "performing")[0]
+          .target();
+
+        if (isComplete(action))
+          complete(action);
+        else {
+          // TODO Perform time steps until the perspective character is no
+          // longer performing an action.
+        }
+
         this.render();
       }
 
@@ -679,6 +721,7 @@ eko.set("action", "inventory", {
   duration: 0,
   title: "inventory",
   complete: function(agent, target, using) {
+    console.log("inventory completed");
     agent.call("set_focus", agent);
   },
   matches: function(agent, target, using) {
@@ -692,6 +735,7 @@ eko.set("action", "surroundings", {
   duration: 0,
   title: "surroundings",
   complete: function(agent, target, using) {
+    console.log("surroundings completed");
     agent.call("clear_focus");
   },
   matches: function(agent, target, using) {
@@ -834,6 +878,16 @@ eko.set("method", "get_options", function(target) {
   }
 
   return options;
+});
+eko.set("method", "get_target", function() {
+  const connections = this.connections("outgoing", "targeting");
+  if (connections.length > 0)
+    return connections[0].target();
+});
+eko.set("method", "get_using", function() {
+  const connections = this.connections("outgoing", "using");
+  if (connections.length > 0)
+    return connections[0].target();
 });
 eko.set("method", "set_focus", function(focus) {
   this.call("clear_focus");
