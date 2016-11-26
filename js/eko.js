@@ -74,6 +74,12 @@ var eko = (function() {
         internal(this).model = model;
       }
 
+      call(name) {
+        return assets.get("method", name).apply(this,
+          Array.prototype.slice.call(arguments, 1)
+        );
+      }
+
       // Get component of type.
       component(type) {
         const model = internal(this).model;
@@ -550,6 +556,12 @@ var eko = (function() {
         internal(this).entities = new Entities();
       }
 
+      call(name) {
+        return assets.get("method", name).apply(this,
+          Array.prototype.slice.call(arguments, 1)
+        );
+      }
+
       // Return an array of entities matching the specified properties. If no
       // properties are given, return all entities in the model.
       entities(properties) {
@@ -589,7 +601,7 @@ var eko = (function() {
         console.log("render");
 
         const perspective = model.entities({perspective: {}})[0];
-        const focus = perspective.connections("incoming", "contains")[0].source();
+        const focus = perspective.call("get_location");
 
         const $eko = $("#eko");
 
@@ -613,7 +625,7 @@ var eko = (function() {
         console.log("start");
         model.reset();
         for (const initial of assets.list("initial"))
-          initial.apply(model);
+          initial(model);
         this.render();
       }
 
@@ -639,8 +651,8 @@ var eko = (function() {
 
 // - Volume is defined in litres.
 
-eko.add("initial", "create_world", {
-  apply(model) {
+eko.add("initial", "create_world",
+  function(model) {
 
     const courtyard = model.entity().create().properties({
       area: {},
@@ -681,14 +693,20 @@ eko.add("initial", "create_world", {
       structure: {name: "perspective", title: "Perspective"}
     });
 
-    calabash.connection("contains", wine).create();
+    wine.call("set_location", calabash);
+    calabash.call("set_location", bench);
+    cup.call("set_location", bench);
+    tree.call("set_location", courtyard);
+    bench.call("set_location", courtyard);
+    walls.call("set_location", courtyard);
+    perspective.call("set_location", courtyard);
+  });
 
-    bench.connection("contains", calabash).create();
-    bench.connection("contains", cup).create();
-
-    courtyard.connection("contains", tree).create();
-    courtyard.connection("contains", bench).create();
-    courtyard.connection("contains", walls).create();
-    courtyard.connection("contains", perspective).create();
-  }
+eko.add("method", "get_location", function() {
+  const connections = this.connections("incoming", "contains");
+  return connections.length === 0 ? undefined : connections[0].source();
+});
+eko.add("method", "set_location", function(location) {
+  this.connections("incoming", "connections").forEach(c => c.delete());
+  location.connection("contains", this).create();
 });
