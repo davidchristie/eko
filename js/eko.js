@@ -610,10 +610,14 @@ var eko = (function() {
         const $eko = $("#eko");
 
         const $header = $("<div>", {class: "header-menu"});
-        $header.append($("<ul>")
-          .append($("<li>").append($("<a>").html("option 1")))
-          .append($("<li>").append($("<a>").html("option 2")))
-          .append($("<li>").append($("<a>").html("option 3"))));
+        (function() {
+          const $menu = $("<ul>");
+          for (const option of perspective.call("get_options")) {
+            $menu.append($("<li>").append($("<a>").html(option.text)));
+          }
+          $header.append($menu);
+        })();
+
 
         const $perspective = $("<div>");
         $perspective.append($header);
@@ -658,6 +662,9 @@ var eko = (function() {
     },
     list: function(type) {
       return assets.list(type);
+    },
+    name: function(asset) {
+      return assets.name(asset);
     },
     set: function(type, name, asset) {
       assets.set(type, name, asset);
@@ -800,6 +807,33 @@ eko.set("method", "get_focus", function() {
 eko.set("method", "get_location", function() {
   const connections = this.connections("incoming", "contains");
   return connections.length === 0 ? undefined : connections[0].source();
+});
+eko.set("method", "get_options", function(target) {
+
+  const option = function(action, agent, target, using) {
+    return {
+      select: function() {
+        const a = agent.model().entity().create();
+        a.properties({action: {name: eko.name(action), progress: 0}});
+        agent.connection("performing", a).create();
+        if (target !== undefined)
+          a.connection("targeting", target).create();
+        if (using !== undefined)
+          a.connection("using", using).create();
+      },
+      text: action.title
+    };
+  };
+
+  const options = [];
+
+  for (const action of eko.list("action")) {
+    if (action.matches(this, target)) {
+      options.push(option(action, this, target));
+    }
+  }
+
+  return options;
 });
 eko.set("method", "set_focus", function(focus) {
   this.call("clear_focus");
