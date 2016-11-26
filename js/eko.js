@@ -184,6 +184,10 @@ var eko = (function() {
         }
       }
 
+      toString() {
+        return `(${this.id()})`;
+      }
+
     }
 
     // A database of entity objects.
@@ -614,8 +618,9 @@ var eko = (function() {
 
         // Describe focus contents.
         for (const contains of focus.connections("outgoing", "contains")) {
-          const {structure: {name}} = contains.target().properties();
-          $perspective.append($("<p>").html(name));
+          const subject = contains.target();
+          const description = perspective.call("describe", subject);
+          $perspective.append($("<p>").html(description));
         }
 
         $eko.empty().append($perspective);
@@ -643,13 +648,47 @@ var eko = (function() {
   return {
     add: function(type, name, asset) {
       assets.add(type, name, asset);
+    },
+    get: function(type, name) {
+      return assets.get(type, name);
+    },
+    list: function(type) {
+      return assets.list(type);
     }
   };
 })();
 
 // Notes:
+// - Volume is in litres.
 
-// - Volume is defined in litres.
+eko.add("description", "breadfruit_tree", {
+  matches(observer, subject) {
+    return subject.matches({structure: {title: "Breadfruit Tree"}});
+  },
+  describe(observer, subject) {
+    const {structure: {name}} = subject.properties();
+    return `A breadfruit ${name}.`;
+  }
+});
+eko.add("description", "mudbrick_walls", {
+  matches(observer, subject) {
+    return subject.matches({structure: {title: "Mudbrick Walls"}}) &&
+      subject.call("get_location").matches({structure: {title: "Courtyard"}});
+  },
+  describe(observer, subject) {
+    const {structure: {name}} = subject.properties();
+    return `Tall mudbrick ${name} surround the yard.`;
+  }
+});
+eko.add("description", "wooden_bench", {
+  matches(observer, subject) {
+    return subject.matches({structure: {title: "Wooden Bench"}});
+  },
+  describe(observer, subject) {
+    const {structure: {name}} = subject.properties();
+    return `A wooden ${name}.`;
+  }
+});
 
 eko.add("initial", "create_world",
   function(model) {
@@ -702,6 +741,16 @@ eko.add("initial", "create_world",
     perspective.call("set_location", courtyard);
   });
 
+eko.add("method", "describe", function(subject) {
+  const matching = [];
+  for (const description of eko.list("description"))
+    if (description.matches(this, subject))
+      matching.push(description);
+  if (matching.length === 0)
+    return subject.toString();
+  const selected = matching[Math.floor(matching.length * Math.random())];
+  return selected.describe(this, subject);
+});
 eko.add("method", "get_location", function() {
   const connections = this.connections("incoming", "contains");
   return connections.length === 0 ? undefined : connections[0].source();
