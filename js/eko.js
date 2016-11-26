@@ -109,6 +109,54 @@ var eko = (function() {
 
     }
 
+    class Structure {
+
+      constructor(type) {
+        internal(this).properties = new Map();
+        internal(this).type = type;
+      }
+
+      // Get or set multiple property values.
+      properties(properties) {
+        if (arguments.length === 0) {
+          // Return the existing properties.
+          const properties = {};
+          for (const key in internal(this).properties.keys())
+            properties[key] = this.property(key);
+          return properties;
+        } else {
+          // Set new property values.
+          for (const key in properties) {
+            const value = properties[key];
+            this.property(key, value);
+          }
+          return this;
+        }
+      }
+
+      // Get or set the value of a property.
+      property(key, value) {
+        if (arguments.length > 1) {
+          if (value === undefined) {
+            // Delete the property.
+            internal(this).properties.delete(key);
+          } else {
+            // Set the property to a new value.
+            internal(this).properties.set(key, value);
+          }
+          return this;
+        } else {
+          // Return the current value of the property.
+          return internal(this).properties.get(key);
+        }
+      }
+
+      type() {
+        return internal(this).type;
+      }
+
+    }
+
     class Model {
 
       constructor() {
