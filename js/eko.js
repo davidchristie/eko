@@ -24,15 +24,6 @@ var eko = (function() {
         internal(this).typeToAssets = new Map();
       }
 
-      add(type, name, asset) {
-        const {assetToName, assetToType, typeToAssets} = internal(this);
-        assetToName.set(asset, name);
-        assetToType.set(asset, type);
-        if (!typeToAssets.has(type))
-          typeToAssets.set(type, new Map());
-        typeToAssets.get(type).set(name, asset);
-      }
-
       get(type, name) {
         if (this.has(type, name)) {
           const {typeToAssets} = internal(this);
@@ -55,6 +46,15 @@ var eko = (function() {
 
       name(asset) {
         return internal(this).assetToName.get(asset);
+      }
+
+      set(type, name, asset) {
+        const {assetToName, assetToType, typeToAssets} = internal(this);
+        assetToName.set(asset, name);
+        assetToType.set(asset, type);
+        if (!typeToAssets.has(type))
+          typeToAssets.set(type, new Map());
+        typeToAssets.get(type).set(name, asset);
       }
 
       type(asset) {
@@ -609,7 +609,14 @@ var eko = (function() {
 
         const $eko = $("#eko");
 
+        const $header = $("<div>", {class: "header-menu"});
+        $header.append($("<ul>")
+          .append($("<li>").append($("<a>").html("option 1")))
+          .append($("<li>").append($("<a>").html("option 2")))
+          .append($("<li>").append($("<a>").html("option 3"))));
+
         const $perspective = $("<div>");
+        $perspective.append($header);
 
         // Add focus title.
         const {structure: {title}} = focus.properties();
@@ -646,22 +653,22 @@ var eko = (function() {
 
   // Public API.
   return {
-    add: function(type, name, asset) {
-      assets.add(type, name, asset);
-    },
     get: function(type, name) {
       return assets.get(type, name);
     },
     list: function(type) {
       return assets.list(type);
+    },
+    set: function(type, name, asset) {
+      assets.set(type, name, asset);
     }
   };
 })();
 
 // Notes:
-// - Volume is in litres.
+// - Volume is measured in litres.
 
-eko.add("description", "breadfruit_tree", {
+eko.set("description", "breadfruit_tree", {
   matches(observer, subject) {
     return subject.matches({structure: {title: "Breadfruit Tree"}});
   },
@@ -670,7 +677,7 @@ eko.add("description", "breadfruit_tree", {
     return `A breadfruit ${name}.`;
   }
 });
-eko.add("description", "mudbrick_walls", {
+eko.set("description", "mudbrick_walls", {
   matches(observer, subject) {
     return subject.matches({structure: {title: "Mudbrick Walls"}}) &&
       subject.call("get_location").matches({structure: {title: "Courtyard"}});
@@ -680,7 +687,7 @@ eko.add("description", "mudbrick_walls", {
     return `Tall mudbrick ${name} surround the yard.`;
   }
 });
-eko.add("description", "wooden_bench", {
+eko.set("description", "wooden_bench", {
   matches(observer, subject) {
     return subject.matches({structure: {title: "Wooden Bench"}});
   },
@@ -690,7 +697,7 @@ eko.add("description", "wooden_bench", {
   }
 });
 
-eko.add("initial", "create_world",
+eko.set("initial", "create_world",
   function(model) {
 
     const courtyard = model.entity().create().properties({
@@ -741,7 +748,7 @@ eko.add("initial", "create_world",
     perspective.call("set_location", courtyard);
   });
 
-eko.add("method", "describe", function(subject) {
+eko.set("method", "describe", function(subject) {
   const matching = [];
   for (const description of eko.list("description"))
     if (description.matches(this, subject))
@@ -751,11 +758,11 @@ eko.add("method", "describe", function(subject) {
   const selected = matching[Math.floor(matching.length * Math.random())];
   return selected.describe(this, subject);
 });
-eko.add("method", "get_location", function() {
+eko.set("method", "get_location", function() {
   const connections = this.connections("incoming", "contains");
   return connections.length === 0 ? undefined : connections[0].source();
 });
-eko.add("method", "set_location", function(location) {
+eko.set("method", "set_location", function(location) {
   this.connections("incoming", "connections").forEach(c => c.delete());
   location.connection("contains", this).create();
 });
