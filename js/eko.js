@@ -21,6 +21,23 @@ var eko = (function() {
         internal(this).model = model;
       }
 
+      // Get component of type.
+      component(type) {
+        const model = internal(this).model;
+        const components = internal(model).components;
+        if (components.has(type, this))
+          return components.get(type, this);
+        else
+          return new Component(type, this);
+      }
+
+      // Return all attached components in an array.
+      components() {
+        const model = internal(this).model;
+        const components = internal(model).components;
+        return components.attached(this);
+      }
+
       // Add this entity to the model.
       create() {
         const model = internal(this).model;
@@ -30,6 +47,9 @@ var eko = (function() {
 
       // Remove this entity from the model.
       delete() {
+        // Delete all attached components.
+        this.components().forEach(c => c.delete());
+        // Remove entity from the model.
         const model = internal(this).model;
         internal(model).entities.remove(this);
         return this;
@@ -167,13 +187,18 @@ var eko = (function() {
 
       // Add this component to the model.
       create() {
-        // TODO
+        const entity = internal(this).entity;
+        entity.create(); // Make sure the entity exists.
+        const model = entity.model();
+        internal(model).components.add(this);
         return this;
       }
 
       // Remove this component from the model.
       delete() {
-        // TODO
+        const entity = internal(this).entity;
+        const model = entity.model();
+        internal(model).components.remove(this);
         return this;
       }
 
@@ -184,7 +209,9 @@ var eko = (function() {
 
       // Checks if this component exists.
       exists() {
-        // TODO
+        const entity = internal(this).entity;
+        const model = entity.model();
+        return internal(model).components.contains(this);
       }
 
     }
@@ -200,9 +227,11 @@ var eko = (function() {
       // Add component to database.
       add(component) {
         if (!this.contains(component)) {
-          const {entityToComponents, typeToComponents} = internal(this);
           const type = component.type();
           const entity = component.entity();
+          if (this.has(type, entity))
+            throw new Error(`Duplicate component: type=${type}, entity=${entity}`);
+          const {entityToComponents, typeToComponents} = internal(this);
           if (!typeToComponents.has(type))
             typeToComponents.set(type, new Set());
           typeToComponents.get(type).add(component);
@@ -210,6 +239,15 @@ var eko = (function() {
             entityToComponents.set(entity, new Map());
           entityToComponents.get(entity).set(type, component);
         }
+      }
+
+      // Return all components attached to a specified entity.
+      attached(entity) {
+        const {entityToComponents} = internal(this);
+        if (entityToComponents.has(entity))
+          return Array.from(entityToComponents.get(entity).values());
+        else
+          return [];
       }
 
       // Check if database contains component.
@@ -234,6 +272,14 @@ var eko = (function() {
           entityToComponents.get(entity).has(type);
       }
 
+      list(type) {
+        const typeToComponents = internal(this).typeToComponents;
+        if (typeToComponents.has(type))
+          return Array.from(typeToComponents.get(type).values());
+        else
+          return [];
+      }
+
       // Remove component from database.
       remove(component) {
         if (this.contains(component)) {
@@ -254,6 +300,7 @@ var eko = (function() {
     class Model {
 
       constructor() {
+        internal(this).components = new Components();
         internal(this).entities = new Entities();
       }
 
