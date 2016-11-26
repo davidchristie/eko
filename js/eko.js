@@ -38,6 +38,23 @@ var eko = (function() {
         return components.attached(this);
       }
 
+      // Get connection.
+      connection(type, target) {
+        const model = internal(this).model;
+        const connections = internal(model).connections;
+        if (connections.has(type, this, target))
+          return connections.get(type, this, target);
+        else
+          return new Connection(type, this, target);
+      }
+
+      // Get the matching connections in an array.
+      connections(direction, type) {
+        const model = internal(this).model;
+        const connections = internal(model).connections;
+        return connections.list(this, direction, type);
+      }
+
       // Add this entity to the model.
       create() {
         const model = internal(this).model;
@@ -340,17 +357,28 @@ var eko = (function() {
 
       // Add connection to the model.
       create() {
-        // TODO
+        const source = internal(this).source;
+        const target = internal(this).target;
+        // Make sure source and target both exist.
+        source.create();
+        target.create();
+        // Add connection to the model.
+        const model = internal(source).model;
+        internal(model).connections.add(this);
       }
 
       // Remove connection from the model.
       delete() {
-        // TODO
+        const source = internal(this).source;
+        const model = internal(source).model;
+        internal(model).connections.remove(this);
       }
 
       // Checks if this connection exists.
       exists() {
-        // TODO
+        const source = internal(this).source;
+        const model = internal(source).model;
+        return internal(model).connections.contains(this);
       }
 
       // The entity this connection starts at.
@@ -400,11 +428,13 @@ var eko = (function() {
       }
 
       get(type, source, target) {
+        const {keyToConnection} = internal(this);
         const key = Connections.key(type, source, target);
         return keyToConnection.get(key);
       }
 
       has(type, source, target) {
+        const {keyToConnection} = internal(this);
         const key = Connections.key(type, source, target);
         return keyToConnection.has(key);
       }
@@ -461,6 +491,7 @@ var eko = (function() {
 
       constructor() {
         internal(this).components = new Components();
+        internal(this).connections = new Connections();
         internal(this).entities = new Entities();
       }
 
