@@ -23,25 +23,28 @@ var eko = (function() {
 
       // Add this entity to the model.
       create() {
-        // TODO
+        const model = internal(this).model;
+        internal(model).entities.add(this);
         return this;
       }
 
       // Remove this entity from the model.
       delete() {
-        // TODO
-        return this;
+        const model = internal(this).model;
+        internal(model).entities.remove(this);
       }
 
       // Checks if this entity currently exists in the model.
       exists() {
-        // TODO
+        const model = internal(this).model;
+        return internal(model).entities.contains(this);
       }
 
       // Return a number that uniquely defines this entity in the model, or
       // undefined if the entity does not currently exist.
       id() {
-        // TODO
+        const model = internal(this).model;
+        return internal(model).entities.id(this);
       }
 
       // Return the model this entity is associated with.
@@ -109,25 +112,31 @@ var eko = (function() {
     class Model {
 
       constructor() {
+        internal(this).entities = new Entities();
       }
 
       // Return an array of entities matching the specified properties. If no
       // properties are given, return all entities in the model.
       entities(properties) {
-        // TODO
+        // TODO Filter entities by properties.
+        return internal(this).entities.list();
       }
 
       // If an ID value is given return the corresponding entity. Otherwise
       // return a new entity that hasn't been added to the model yet.
       entity(id) {
-        // TODO
+        if (arguments.length === 0) {
+          return new Entity(this);
+        } else {
+          return internal(this).entities.get(id);
+        }
       }
 
     }
 
     return Model;
-  });
+  })();
 
   // Public API.
-  return {};
+  return {Model};
 })();
