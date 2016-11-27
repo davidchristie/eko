@@ -781,6 +781,22 @@ var eko = (function() {
 // Notes:
 // - Volume is measured in litres.
 
+eko.set("action", "drink_from_container", {
+  duration: 3,
+  complete(agent, target, using) {
+    target.call("get_contents").forEach(e => e.delete());
+  },
+  matches(agent, target, using) {
+    return agent.matches({character: {}}) &&
+      target !== undefined &&
+      target.matches({container: {}}) &&
+      target.call("get_contents").length > 0 &&
+      using === undefined;
+  },
+  name(agent, target, using) {
+    return "drink";
+  }
+});
 eko.set("action", "drop_item", {
   duration: 3,
   complete(agent, target, using) {
@@ -846,7 +862,7 @@ eko.set("action", "place_item", {
   }
 });
 eko.set("action", "pour_liquid", {
-  duration: 0,
+  duration: 5,
   complete(agent, target, using) {
     const liquid = using.call("get_contents")[0];
     const liquidVolume = liquid.component("liquid").property("volume");
@@ -874,9 +890,10 @@ eko.set("action", "pour_liquid", {
       using.call("get_contents").length !== 0;
   },
   name(agent, target, using) {
-    const liquid = using.call("get_contents")[0];
-    const {structure: {name}} = liquid.properties();
-    return "pour " + name;
+    const {structure: {name: liquid}} = using.call("get_contents")[0]
+      .properties();
+    const {structure: {name: container}} = using.properties();
+    return `pour ${liquid} from ${container}`;
   }
 });
 eko.set("action", "surroundings", {
