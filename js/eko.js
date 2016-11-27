@@ -619,9 +619,16 @@ var eko = (function() {
       }
     }
 
+    // If the perspective character can perform actions on the entity return
+    // a link to the entity that shows the context menu when clicked.
+    // If there are no actions available return an empty element.
     function $entity(entity) {
-      return $("<a>").attr("entity", entity.id())
-        .on("click", showContextMenu.bind(this));
+      const perspective = model.entities({perspective: {}})[0];
+      if (perspective.call("get_options", entity).length > 0)
+        return $("<a>").attr("entity", entity.id())
+          .on("click", showContextMenu.bind(this));
+      else
+        return $("<span>");
     }
 
     function $option(option) {
@@ -632,6 +639,14 @@ var eko = (function() {
         update();
       }.bind(this));
       return $option;
+    }
+
+    function $title(entity) {
+      const perspective = model.entities({perspective: {}})[0];
+      const title = perspective === entity ?
+        "Inventory" :
+        entity.component("structure").property("title");
+      return $("<h1>").append($entity(entity).html(title));
     }
 
     function hideContextMenu() {
@@ -653,26 +668,19 @@ var eko = (function() {
       }
       $header.append($menu);
 
-
       const $perspective = $("<div>");
 
       // Add title.
-      const title = perspective === focus ?
-        "Inventory" :
-        focus.component("structure").property("title");
-
-      $perspective.append($("<h1>").html(title));
+      $perspective.append($title(focus));
 
       // Describe contents.
       for (const contains of focus.connections("outgoing", "contains")) {
         const subject = contains.target();
-        $perspective.append($("<p>").append($describe(subject)));
+        if (subject !== perspective)
+          $perspective.append($("<p>").append($describe(subject)));
       }
 
       const $context = $("<ul>", {id: "context-menu"});
-      $context.append($("<li>").html("option 1"));
-      $context.append($("<li>").html("option 2"));
-      $context.append($("<li>").html("option 3"));
 
       $eko.empty().append($header).append($perspective).append($context);
     }
@@ -801,11 +809,32 @@ eko.set("action", "surroundings", {
       using === undefined;
   }
 });
+eko.set("action", "take_item", {
+  duration: 0,
+  title: "take",
+  complete: function(agent, target, using) {
+    target.call("set_location", agent);
+  },
+  matches: function(agent, target, using) {
+    return agent.matches({character: {}}) &&
+      target !== undefined &&
+      target.matches({item: {}}) &&
+      !target.call("get_location").matches({character: {}}) &&
+      using === undefined;
+  }
+});
 
+eko.set("description", "brass_cup", {
+  describe(observer, subject) {
+    return `A brass cup.`;
+  },
+  matches(observer, subject) {
+    return subject.matches({structure: {title: "Brass Cup"}});
+  }
+});
 eko.set("description", "breadfruit_tree", {
   describe(observer, subject) {
-    const {structure: {name}} = subject.properties();
-    return `A breadfruit ${name}.`;
+    return `A breadfruit tree.`;
   },
   matches(observer, subject) {
     return subject.matches({structure: {title: "Breadfruit Tree"}});
@@ -813,21 +842,37 @@ eko.set("description", "breadfruit_tree", {
 });
 eko.set("description", "mudbrick_walls", {
   describe(observer, subject) {
-    const {structure: {name}} = subject.properties();
-    return `Tall mudbrick ${name} surround the yard.`;
+    return `Mudbrick walls.`;
   },
   matches(observer, subject) {
     return subject.matches({structure: {title: "Mudbrick Walls"}}) &&
       subject.call("get_location").matches({structure: {title: "Courtyard"}});
   },
 });
+eko.set("description", "painted_calabash", {
+  describe(observer, subject) {
+    return `A painted calabash.`;
+  },
+  matches(observer, subject) {
+    return subject.matches({structure: {title: "Painted Calabash"}});
+  }
+});
+eko.set("description", "palm_wine_in_container", {
+  describe(observer, subject) {
+    const {structure: {name}} = subject.call("get_location").properties();
+    return `The ${name} is filled with palm wine.`;
+  },
+  matches(observer, subject) {
+    return subject.matches({structure: {title: "Palm Wine"}}) &&
+      subject.call("get_location").matches({container: {}});
+  }
+});
 eko.set("description", "wooden_bench", {
   matches(observer, subject) {
     return subject.matches({structure: {title: "Wooden Bench"}});
   },
   describe(observer, subject) {
-    const {structure: {name}} = subject.properties();
-    return `A wooden ${name}.`;
+    return `A wooden bench.`;
   }
 });
 
@@ -860,6 +905,7 @@ eko.set("initial", "create_world",
 
     const cup = model.entity().create().properties({
       container: {volume: 0.2},
+      item: {},
       structure: {name: "cup", title: "Brass Cup"}
     });
 
@@ -950,6 +996,6 @@ eko.set("method", "set_focus", function(focus) {
   this.connection("focused_on", focus).create();
 });
 eko.set("method", "set_location", function(location) {
-  this.connections("incoming", "connections").forEach(c => c.delete());
+  this.connections("incoming", "contains").forEach(c => c.delete());
   location.connection("contains", this).create();
 });
