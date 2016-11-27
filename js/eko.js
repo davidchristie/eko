@@ -769,6 +769,20 @@ var eko = (function() {
 // Notes:
 // - Volume is measured in litres.
 
+eko.set("action", "drop_item", {
+  duration: 0,
+  title: "drop",
+  complete: function(agent, target, using) {
+    target.call("set_location", agent.call("get_location"));
+  },
+  matches: function(agent, target, using) {
+    return agent.matches({character: {}}) &&
+      target !== undefined &&
+      target.matches({item: {}}) &&
+      target.call("get_location") === agent &&
+      using === undefined;
+  }
+});
 eko.set("action", "inventory", {
   duration: 0,
   title: "inventory",
