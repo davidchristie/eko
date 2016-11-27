@@ -603,14 +603,39 @@ var eko = (function() {
       start();
     });
 
-    function $link(option) {
-      const $link = $("<a>").html(option.text);
-      $link.on("click", function() {
+    // Hides the context menu if the user clicks on anything that isn't a link.
+    $(document).on("click", function(event) {
+      if (!$(event.target).is("a"))
+        hideContextMenu();
+    });
+
+    function $describe(entity) {
+      const perspective = model.entities({perspective: {}})[0];
+      const description = perspective.call("describe", entity);
+      if (entity.matches({structure: {}})) {
+        return $entity(entity).html(description);
+      } else {
+        return $("<span>").html(description);
+      }
+    }
+
+    function $entity(entity) {
+      return $("<a>").attr("entity", entity.id())
+        .on("click", showContextMenu.bind(this));
+    }
+
+    function $option(option) {
+      const $option = $("<a>").html(option.text);
+      $option.on("click", function() {
         console.log("option selected: " + option.text);
         option.select();
         update();
       }.bind(this));
-      return $link;
+      return $option;
+    }
+
+    function hideContextMenu() {
+      $("#context-menu").hide();
     }
 
     function render() {
@@ -624,13 +649,12 @@ var eko = (function() {
       const $header = $("<div>", {class: "header-menu"});
       const $menu = $("<ul>");
       for (const option of perspective.call("get_options")) {
-        $menu.append($("<li>").append($link(option)));
+        $menu.append($("<li>").append($option(option)));
       }
       $header.append($menu);
 
 
       const $perspective = $("<div>");
-      $perspective.append($header);
 
       // Add title.
       const title = perspective === focus ?
@@ -639,14 +663,40 @@ var eko = (function() {
 
       $perspective.append($("<h1>").html(title));
 
-      // Describe focus contents.
+      // Describe contents.
       for (const contains of focus.connections("outgoing", "contains")) {
         const subject = contains.target();
-        const description = perspective.call("describe", subject);
-        $perspective.append($("<p>").html(description));
+        $perspective.append($("<p>").append($describe(subject)));
       }
 
-      $eko.empty().append($perspective);
+      const $context = $("<ul>", {id: "context-menu"});
+      $context.append($("<li>").html("option 1"));
+      $context.append($("<li>").html("option 2"));
+      $context.append($("<li>").html("option 3"));
+
+      $eko.empty().append($header).append($perspective).append($context);
+    }
+
+    function showContextMenu(event) {
+      const id = Number($(event.target).attr("entity"));
+      const target = model.entity(id);
+
+      const perspective = model.entities({perspective: {}})[0];
+      const options = perspective.call("get_options", target);
+
+      const $context = $("#context-menu");
+
+      // Add the options.
+      $context.empty();
+      for (const option of options)
+        $context.append($("<li>").append($option(option)));
+
+      // Show the context menu.
+      $context.css({
+        position: "absolute",
+        left: event.clientX,
+        top: event.clientY
+      }).show();
     }
 
     function start() {
@@ -715,7 +765,6 @@ eko.set("action", "inventory", {
   duration: 0,
   title: "inventory",
   complete: function(agent, target, using) {
-    console.log("inventory completed");
     agent.call("set_focus", agent);
   },
   matches: function(agent, target, using) {
@@ -725,11 +774,24 @@ eko.set("action", "inventory", {
       using === undefined;
   }
 });
+eko.set("action", "look_at", {
+  duration: 0,
+  title: "look at",
+  complete: function(agent, target, using) {
+    agent.call("set_focus", target);
+  },
+  matches: function(agent, target, using) {
+    return agent.matches({perspective: {}}) &&
+      agent.call("get_focus") !== target &&
+      target !== undefined &&
+      target.matches({structure: {}}) &&
+      using === undefined;
+  }
+});
 eko.set("action", "surroundings", {
   duration: 0,
   title: "surroundings",
   complete: function(agent, target, using) {
-    console.log("surroundings completed");
     agent.call("clear_focus");
   },
   matches: function(agent, target, using) {
