@@ -25,10 +25,10 @@ var eko = (function() {
       }
 
       get(type, name) {
-        if (this.has(type, name)) {
-          const {typeToAssets} = internal(this);
-          return typeToAssets.get(type).get(name);
-        }
+        if (!this.has(type, name))
+          throw new Error(`Asset not found: type=${type}, name=${name}`);
+        const {typeToAssets} = internal(this);
+        return typeToAssets.get(type).get(name);
       }
 
       has(type, name) {
@@ -931,59 +931,31 @@ eko.set("description", "wooden_bench", {
 
 eko.set("initial", "create_world",
   function(model) {
-
-    const courtyard = model.entity().create().properties({
-      area: {},
-      structure: {name: "courtyard", title: "Courtyard"}
-    });
-
-    const tree = model.entity().create().properties({
-      structure: {name: "tree", title: "Breadfruit Tree"}
-    });
-
-    const bench = model.entity().create().properties({
-      surface: {},
-      structure: {name: "bench", title: "Wooden Bench"}
-    });
-
-    const calabash = model.entity().create().properties({
-      container: {volume: 1},
-      item: {},
-      structure: {name: "calabash", title: "Painted Calabash"}
-    });
-
-    const wine = model.entity().create().properties({
-      liquid: {volume: 1},
-      structure: {name: "wine", title: "Palm Wine"}
-    });
-
-    const cup = model.entity().create().properties({
-      container: {volume: 0.2},
-      item: {},
-      structure: {name: "cup", title: "Brass Cup"}
-    });
-
-    const walls = model.entity().create().properties({
-      structure: {name: "walls", title: "Mudbrick Walls"}
-    });
-
+    const courtyard = model.call("create_template", "courtyard");
     const perspective = model.entity().create().properties({
       character: {},
       perspective: {},
       structure: {name: "perspective", title: "Perspective"}
     });
-
-    wine.call("set_location", calabash);
-    calabash.call("set_location", bench);
-    cup.call("set_location", bench);
-    tree.call("set_location", courtyard);
-    bench.call("set_location", courtyard);
-    walls.call("set_location", courtyard);
     perspective.call("set_location", courtyard);
   });
 
 eko.set("method", "clear_focus", function() {
   this.connections("outgoing", "focused_on").forEach(c => c.delete());
+});
+eko.set("method", "create_template", function(name) {
+  if (this.entity) {
+    // Called on model.
+    const entity = this.entity().create();
+    eko.get("template", name)(entity);
+    return entity;
+  } else {
+    // Called on entity.
+    const entity = this.model().entity().create();
+    eko.get("template", name)(entity);
+    entity.call("set_location", this);
+    return entity;
+  }
 });
 eko.set("method", "describe", function(subject) {
   const matching = [];
@@ -1072,4 +1044,53 @@ eko.set("method", "set_focus", function(focus) {
 eko.set("method", "set_location", function(location) {
   this.connections("incoming", "contains").forEach(c => c.delete());
   location.connection("contains", this).create();
+});
+
+eko.set("template", "brass_cup", function(entity) {
+  entity.properties({
+    container: {volume: 0.2},
+    item: {},
+    structure: {name: "cup", title: "Brass Cup"}
+  });
+});
+eko.set("template", "breadfruit_tree", function(entity) {
+  entity.properties({
+    structure: {name: "tree", title: "Breadfruit Tree"}
+  });
+});
+eko.set("template", "courtyard", function(entity) {
+  entity.properties({
+    area: {},
+    structure: {name: "courtyard", title: "Courtyard"}
+  });
+  entity.call("create_template", "breadfruit_tree");
+  const bench = entity.call("create_template", "wooden_bench");
+  bench.call("create_template", "brass_cup");
+  bench.call("create_template", "painted_calabash")
+    .call("create_template", "palm_wine");
+  entity.call("create_template", "mudbrick_walls");
+});
+eko.set("template", "mudbrick_walls", function(entity) {
+  entity.properties({
+    structure: {name: "walls", title: "Mudbrick Walls"}
+  });
+});
+eko.set("template", "painted_calabash", function(entity) {
+  entity.properties({
+    container: {volume: 1},
+    item: {},
+    structure: {name: "calabash", title: "Painted Calabash"}
+  });
+});
+eko.set("template", "palm_wine", function(entity) {
+  entity.properties({
+    liquid: {volume: 1},
+    structure: {name: "wine", title: "Palm Wine"}
+  });
+});
+eko.set("template", "wooden_bench", function(entity) {
+  entity.properties({
+    surface: {},
+    structure: {name: "bench", title: "Wooden Bench"}
+  });
 });
