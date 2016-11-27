@@ -845,6 +845,40 @@ eko.set("action", "place_item", {
     return `place ${name}`;
   }
 });
+eko.set("action", "pour_liquid", {
+  duration: 0,
+  complete(agent, target, using) {
+    const liquid = using.call("get_contents")[0];
+    const liquidVolume = liquid.component("liquid").property("volume");
+    const {liquid: {template}} = liquid.properties();
+    const container = target;
+    const containerVolume = container.component("container").property("volume");
+    const poured = target.call("create_template", template);
+    if (containerVolume >= liquidVolume) {
+      liquid.delete();
+      poured.properties({liquid: {volume: liquidVolume}});
+    } else {
+      liquid.properties({liquid: {volume: liquidVolume - containerVolume}});
+      poured.properties({liquid: {volume: containerVolume}});
+    }
+  },
+  matches(agent, target, using) {
+    return agent.matches({perspective: {}}) &&
+      agent.matches({character: {}}) &&
+      target !== undefined &&
+      target.matches({container: {}}) &&
+      target.call("get_contents").length === 0 &&
+      target !== using &&
+      using !== undefined &&
+      using.matches({container: {}}) &&
+      using.call("get_contents").length !== 0;
+  },
+  name(agent, target, using) {
+    const liquid = using.call("get_contents")[0];
+    const {structure: {name}} = liquid.properties();
+    return "pour " + name;
+  }
+});
 eko.set("action", "surroundings", {
   duration: 0,
   complete(agent, target, using) {
@@ -877,12 +911,12 @@ eko.set("action", "take_item", {
   }
 });
 
-eko.set("description", "brass_cup", {
+eko.set("description", "breadfruit", {
   describe(observer, subject) {
-    return `A brass cup.`;
+    return `Breadfruit.`;
   },
   matches(observer, subject) {
-    return subject.matches({structure: {title: "Brass Cup"}});
+    return subject.matches({structure: {title: "Breadfruit"}});
   }
 });
 eko.set("description", "breadfruit_tree", {
@@ -891,6 +925,25 @@ eko.set("description", "breadfruit_tree", {
   },
   matches(observer, subject) {
     return subject.matches({structure: {title: "Breadfruit Tree"}});
+  }
+});
+eko.set("description", "empty_brass_cup", {
+  describe(observer, subject) {
+    return `An empty brass cup.`;
+  },
+  matches(observer, subject) {
+    return subject.matches({structure: {title: "Brass Cup"}}) &&
+      subject.call("get_contents").length === 0;
+  }
+});
+eko.set("description", "filled_brass_cup", {
+  describe(observer, subject) {
+    const {structure: {name}} = subject.call("get_contents")[0].properties();
+    return `A brass cup filled with ${name}.`;
+  },
+  matches(observer, subject) {
+    return subject.matches({structure: {title: "Brass Cup"}}) &&
+      subject.call("get_contents").length > 0;
   }
 });
 eko.set("description", "mudbrick_walls", {
@@ -1053,10 +1106,17 @@ eko.set("template", "brass_cup", function(entity) {
     structure: {name: "cup", title: "Brass Cup"}
   });
 });
+eko.set("template", "breadfruit", function(entity) {
+  entity.properties({
+    item: {},
+    structure: {name: "breadfruit", title: "Breadfruit"}
+  });
+});
 eko.set("template", "breadfruit_tree", function(entity) {
   entity.properties({
     structure: {name: "tree", title: "Breadfruit Tree"}
   });
+  entity.call("create_template", "breadfruit");
 });
 eko.set("template", "courtyard", function(entity) {
   entity.properties({
@@ -1084,8 +1144,8 @@ eko.set("template", "painted_calabash", function(entity) {
 });
 eko.set("template", "palm_wine", function(entity) {
   entity.properties({
-    liquid: {volume: 1},
-    structure: {name: "wine", title: "Palm Wine"}
+    liquid: {template: "palm_wine", volume: 1},
+    structure: {name: "palm wine", title: "Palm Wine"}
   });
 });
 eko.set("template", "wooden_bench", function(entity) {
