@@ -603,7 +603,7 @@ var eko = (function() {
       start();
     });
 
-    // Hides the context menu if the user clicks on anything that isn't a link.
+    // Hide the context menu if the user clicks on anything that isn't a link.
     $(document).on("click", function(event) {
       if (!$(event.target).is("a"))
         hideContextMenu();
@@ -733,15 +733,27 @@ var eko = (function() {
       };
 
       console.log("update");
-      const perspective = model.entities({perspective: {}})[0];
+      const perspective = model.call("get_perspective");
       const action = perspective.connections("outgoing", "performing")[0]
         .target();
-
       if (isComplete(action))
         complete(action);
       else {
-        // TODO Perform time steps until the perspective character is no
-        // longer performing an action.
+
+        while (model.call("get_perspective").call("get_action").exists()) {
+          console.log("time step");
+
+          for (const action of model.entities({action: {}})) {
+            // Increment action progress.
+            const {action: {progress}} = action.properties();
+            action.properties({action: {progress: progress + 1}});
+            // Check for completion.
+            if (isComplete(action))
+              complete(action);
+          }
+
+        }
+
       }
 
       render();
@@ -770,71 +782,98 @@ var eko = (function() {
 // - Volume is measured in litres.
 
 eko.set("action", "drop_item", {
-  duration: 0,
-  title: "drop",
-  complete: function(agent, target, using) {
+  duration: 3,
+  complete(agent, target, using) {
     target.call("set_location", agent.call("get_location"));
   },
-  matches: function(agent, target, using) {
+  matches(agent, target, using) {
     return agent.matches({character: {}}) &&
       target !== undefined &&
       target.matches({item: {}}) &&
       target.call("get_location") === agent &&
       using === undefined;
+  },
+  name(agent, target, using) {
+    return "drop";
   }
 });
 eko.set("action", "inventory", {
   duration: 0,
-  title: "inventory",
-  complete: function(agent, target, using) {
+  complete(agent, target, using) {
     agent.call("set_focus", agent);
   },
-  matches: function(agent, target, using) {
+  matches(agent, target, using) {
     return agent.matches({perspective: {}}) &&
       agent.call("get_focus") !== agent &&
       target === undefined &&
       using === undefined;
+  },
+  name(agent, target, using) {
+    return "inventory";
   }
 });
 eko.set("action", "look_at", {
   duration: 0,
-  title: "look at",
-  complete: function(agent, target, using) {
+  complete(agent, target, using) {
     agent.call("set_focus", target);
   },
-  matches: function(agent, target, using) {
+  matches(agent, target, using) {
     return agent.matches({perspective: {}}) &&
       agent.call("get_focus") !== target &&
       target !== undefined &&
       target.matches({structure: {}}) &&
       using === undefined;
+  },
+  name(agent, target, using) {
+    return "look at";
+  }
+});
+eko.set("action", "place_item", {
+  duration: 3,
+  complete(agent, target, using) {
+    using.call("set_location", target);
+  },
+  matches(agent, target, using) {
+    return agent.matches({character: {}}) &&
+      target !== undefined &&
+      target.matches({surface: {}}) &&
+      using !== undefined &&
+      using.matches({item: {}});
+  },
+  name(agent, target, using) {
+    const {structure: {name}} = using.properties();
+    return `place ${name}`;
   }
 });
 eko.set("action", "surroundings", {
   duration: 0,
-  title: "surroundings",
-  complete: function(agent, target, using) {
+  complete(agent, target, using) {
     agent.call("clear_focus");
   },
-  matches: function(agent, target, using) {
+  matches(agent, target, using) {
     return agent.matches({perspective: {}}) &&
       agent.connections("outgoing", "focused_on").length !== 0 &&
       target === undefined &&
       using === undefined;
+  },
+  name(agent, target, using) {
+    return "surroundings";
   }
 });
 eko.set("action", "take_item", {
-  duration: 0,
-  title: "take",
-  complete: function(agent, target, using) {
+  duration: 3,
+  complete(agent, target, using) {
     target.call("set_location", agent);
   },
-  matches: function(agent, target, using) {
+  matches(agent, target, using) {
     return agent.matches({character: {}}) &&
       target !== undefined &&
       target.matches({item: {}}) &&
       !target.call("get_location").matches({character: {}}) &&
       using === undefined;
+  },
+  name(agent, target, using) {
+    return "take";
   }
 });
 
@@ -903,6 +942,7 @@ eko.set("initial", "create_world",
     });
 
     const bench = model.entity().create().properties({
+      surface: {},
       structure: {name: "bench", title: "Wooden Bench"}
     });
 
@@ -955,6 +995,19 @@ eko.set("method", "describe", function(subject) {
   const selected = matching[Math.floor(matching.length * Math.random())];
   return selected.describe(this, subject);
 });
+eko.set("method", "get_action", function() {
+  const connections = this.connections("outgoing", "performing");
+  if (connections.length > 0)
+    return connections[0].target();
+  else
+    return this.model().entity(); // Return non-existent entity.
+});
+eko.set("method", "get_contents", function() {
+  const contents = [];
+  for (const connection of this.connections("outgoing", "contains"))
+    contents.push(connection.target());
+  return contents;
+});
 eko.set("method", "get_focus", function() {
   const connections = this.connections("outgoing", "focused_on");
   if (connections.length > 0)
@@ -981,19 +1034,26 @@ eko.set("method", "get_options", function(target) {
         if (using !== undefined)
           a.connection("using", using).create();
       },
-      text: action.title
+      text: action.name(agent, target, using)
     };
   };
 
   const options = [];
 
   for (const action of eko.list("action")) {
-    if (action.matches(this, target)) {
+    if (action.matches(this, target))
       options.push(option(action, this, target));
+    else {
+      for (const using of this.call("get_contents"))
+        if (action.matches(this, target, using))
+          options.push(option(action, this, target, using));
     }
   }
 
   return options;
+});
+eko.set("method", "get_perspective", function() {
+  return this.entities({perspective: {}})[0];
 });
 eko.set("method", "get_target", function() {
   const connections = this.connections("outgoing", "targeting");
