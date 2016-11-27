@@ -2,36 +2,28 @@ a {
   cursor: pointer;
 }
 
-ul {
-  list-style-type: none;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  background-color: #333333;
+h1 {
+  padding-bottom: 30px;
 }
 
-li a {
-  display: block;
-  color: white;
-  text-align: left;
-  padding: 16px;
-  text-decoration: none;
+li {
+  font-size: 1.6em;
 }
 
-li a:hover {
-  background-color: #111111;
+p {
+  font-size: 1.6em;
 }
 
-.header-menu li {
-  float: left;
+.no-select {
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -webkit-user-select: none;
 }
 
 #context-menu {
   display: none;
 }
 
-#eko {
-  -moz-user-select: none;
-  -ms-user-select: none;
-  -webkit-user-select: none;
+#perspective {
+  padding-top: 50px;
 }

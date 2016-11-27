@@ -656,19 +656,21 @@ var eko = (function() {
     function render() {
       console.log("render");
 
+      hideContextMenu();
+
       const perspective = model.entities({perspective: {}})[0];
       const focus = perspective.call("get_focus");
 
-      const $eko = $("#eko");
 
-      const $header = $("<div>", {class: "header-menu"});
-      const $menu = $("<ul>");
+      const $menu = $("<ul>").addClass("nav").addClass("navbar-nav");
       for (const option of perspective.call("get_options")) {
         $menu.append($("<li>").append($option(option)));
       }
-      $header.append($menu);
+      $("#header-menu").empty().append($menu);
 
-      const $perspective = $("<div>");
+      const $perspective = $("#perspective");
+
+      $perspective.empty();
 
       // Add title.
       $perspective.append($title(focus));
@@ -679,10 +681,6 @@ var eko = (function() {
         if (subject !== perspective)
           $perspective.append($("<p>").append($describe(subject)));
       }
-
-      const $context = $("<ul>", {id: "context-menu"});
-
-      $eko.empty().append($header).append($perspective).append($context);
     }
 
     function showContextMenu(event) {
